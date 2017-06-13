@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!--
+  Proof of concept implementation of webgl/gltf tiles for leaflet
+  accessibility maps requested from route360-js api.
+
+  ** Copyright & License **
+  (C) 2015-2016 Alexander Schoedon <schoedon@uni-potsdam.de>
+
+  All rights reserved. View LICENSE for full GPLv3 conditions.
+-->
+
+<html>
+  <head>
+    <title>reachability maps proof of concept #5 webgl gltf tiling</title>
+  </head>
+
+  <body onload="accessibility_map()">
+    <div id="map-wrap">
+
+      <!-- header note -->
+      <header><strong>Note</strong>: This is not a production-ready application,
+        but rather a proof-of-concept for a glTF-based network rendering
+        technique. Parameter hash <span id="hash">0</span>.</header>
+
+      <!-- map canvas -->
+      <div id="map"></div>      
+      <form>
+		<div id="dropdown">
+			<select name="hallo" autocomplete="off">
+				<option onclick="drawTexture(contextTexture)">Isochrones</option>
+				<option onclick="drawTexture(focusTexture)">Lines</option>
+				<option onclick="clearScreen()">Basemap</option>
+			</select>
+		</div>
+		<div id="checkbox">			
+			<input type="checkbox" id="magicLens" autocomplete="off">
+			<label for="magicLens"><i>Magic Lens</i></label>		<!-- autocomplete="off" is for not memorizing a previous checked checkbox and start "clean"-->
+		</div>
+      </form>
+
+      <!-- debug footer -->
+      <footer>Network loaded [<span id="bar">----------</span>]
+        <span id="perc">0.00</span>%, <span id="calls">0</span> WebGL draw
+        call(s) in <span id="timer">0</span> ms (<span id="frames">0</span>
+        FPS). Loaded primitives: <span id="vertex">0</span> nodes (
+        <span id="index">0</span> lines). Tiles in cache:
+        <span id="tiles">0</span>.</footer>
+    </div>
+
+    <!-- styles -->
+    <link rel="stylesheet" href="./lib/jquery-ui-bootstrap/css/custom-theme/jquery-ui-1.10.0.custom.css" />
+    <link rel="stylesheet" href="./lib/leaflet/leaflet.css" />
+    <link rel="stylesheet" href="./lib/r360/r360.css" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Montserrat:400,700" />
+    <link rel="stylesheet" href="./lib/jquery-ui-bootstrap/assets/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="./lib/jquery-ui-bootstrap/assets/js/google-code-prettify/prettify.css" />
+
+    <style>
+      html { min-height: 100% }
+      body { min-height: 100%; margin: 0; padding: 0 }
+      #map-wrap { padding: 1.5em 0; position: absolute; top: 0; bottom: 0; left: 0; right: 0 }
+      header { margin-top: -1.5em; height: 1.5em; padding-left: 1.5em; background: #00341B; color: #D9D9D9 }
+      #map { min-height: 100% }
+      /*#dropdown { padding: 1.5em 0; position: absolute; top: 50px; right: 8px }*/
+      #magicLens {margin: auto}
+      form {display: inline-block; padding: 1.5em 0; position: absolute; top: 50px; right: 8px}
+      label { display: inline-block; margin: auto }
+      footer { margin-bottom: -1.5em; height: 1.5em; padding-left: 1.5em; background: #00341B; color: #D9D9D9 }
+    </style>
+	
+	<!-- data -->
+	<script src="./600.gltf"></script>
+
+    <!-- libs -->
+    <script src="./lib/jquery/jquery-2.2.3.js"></script>
+    <script src="./lib/jquery-ui-bootstrap/js/jquery-ui-1.9.2.custom.min.js"></script>
+    <script src="./lib/leaflet/leaflet-src.js"></script>
+    <script src="./lib/leaflet-canvasoverlay/L.CanvasOverlay.js"></script>
+    <script src="./lib/r360/r360-src.js"></script>
+    <script src="./lib/r360/r360-leaflet-src.js"></script>
+    <script src="./lib/underscore/underscore.js"></script>
+    <script src="./lib/sha1/sha1.js"></script>
+	<script src="./lib/webgl-utils.js"></script>
+	<script src="./lib/webgl-debug.js"></script>
+	<script src="https://twgljs.org/dist/3.x/twgl-full.min.js"></script> <!-- Math library -->
+
+    <!-- custom leaflet plugins -->
+    <script src="./lib/leaflet-tilebuffer/L.TileBuffer.js"></script>
+    <script src="./lib/leaflet-tilebuffer/L.TileBufferCollection.js"></script>
+
+    <!-- custom accessibility map scripts -->
+    <script src="./accessibility.js"></script>
+
+    <!-- shaders -->
+    <script id="vShaderInit" type="notjs">
+      uniform mat4 u_matrix;
+      attribute vec3 a_vertex;
+      attribute float a_coord;
+      varying float v_coord;
+
+      void main(void) {
+        gl_Position = u_matrix * vec4(a_vertex, 1.0);
+        v_coord = a_coord;
+      }
+    </script>
+
+    <script type="notjs" id="fShaderFocus">
+      precision highp float;
+
+      uniform sampler2D u_ColorRamp;
+      uniform float u_MaxTravelTime;
+
+      varying float v_coord;
+
+      void main(void) {
+        float t_coord = v_coord / 2.0;
+        if (v_coord < 0.0 || v_coord > u_MaxTravelTime) {
+          discard; /* hide unreachable roads */
+        } else {
+          vec4 rampColor = texture2D(u_ColorRamp, vec2(abs(t_coord), 0.5));
+          gl_FragColor = vec4(rampColor.rgb, rampColor.a * 0.9);
+        }
+      }
+    </script>
+	
+	<script id="fShaderInit" type="notjs">
+		// #version 200
+		// #extension GL_EXT_draw_buffers : require
+
+		precision highp float;
+		
+		uniform vec2 u_Resolution;
+		// uniform float u_MaxTravelTime;	// between [0,2] where 2 = 120min
+
+      varying float v_coord;
+
+      void main(void) {
+        float t_coord = v_coord / 2.0;
+        // gl_FragData[0] = vec4(gl_FragCoord.xy / u_Resolution, 0.0, t_coord); 
+        // gl_FragData[1] = vec4(gl_FragCoord.xy / u_Resolution, 0.0, t_coord); 
+        gl_FragColor = vec4(gl_FragCoord.xy / u_Resolution, 0.0, t_coord);
+      }
+	</script>
+
+	<script id="vShaderCircle" type="notjs">
+		attribute vec4 a_coord;
+
+		uniform mat4 u_matrix;
+
+		void main(){
+			gl_Position = u_matrix * a_coord;
+		}
+	</script>
+
+	<script id="fShaderCircle" type="notjs">
+		precision highp float;
+
+		void main(){
+			gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+		}
+	</script>
+
+	<script id="vShaderQuad" type="notjs">
+		attribute vec4 a_Position;
+		
+		void main(){
+			gl_Position = a_Position;
+		}
+	</script>
+
+	
+	<script id="fShaderJFA" type="notjs">
+		precision highp float;
+		
+		uniform sampler2D u_Sampler;
+		uniform int u_stepSize;
+		uniform vec2 u_Resolution;
+		
+		bool between(const vec2 value, const vec2 bottom, const vec2 top) {
+			return (
+				all(greaterThan(value, bottom)) &&
+				all(lessThan(value, top))
+			);
+		}
+		
+		bool validUv(const vec2 uv) {
+			return between(
+				uv,
+				vec2(0., 0.),
+				vec2(1., 1.)
+			);
+		}
+		
+		vec2 decodePosition(vec2 encodedPosition){
+			vec2 decodedPosition = encodedPosition * u_Resolution;
+			
+			return decodedPosition + vec2(0.5);
+		}
+		
+		vec4 jumpFlood(vec4 thisPixel, vec2 offset){
+			vec2 gridUv = (gl_FragCoord.xy + offset) / u_Resolution;	// texture coordinates of otherPixel
+			vec4 otherPixel = texture2D(u_Sampler, gridUv);
+			
+			// make sure to have an invalid cell where offset is off the display
+			if (!validUv(gridUv)){
+				otherPixel = vec4(0.0, 0.0, 1.0, 0.0);
+			}
+			
+			// if thisPixel is not yet set but otherPixel is return otherPixel
+			if (thisPixel.z == 1.0 && otherPixel.z == 0.0){
+				return otherPixel;
+			}
+			
+			// if thisPixel is set but otherPixel is not return thisPixel
+			if (thisPixel.z == 0.0 && otherPixel.z == 1.0){
+				return thisPixel;
+			}
+			// if neither thisPixel nor otherPixel are yet set return thisPixel as invalid (not set) pixel for the next round
+			if (thisPixel.z == 1.0 && otherPixel.z == 1.0){
+				return thisPixel;
+			}
+			
+			// if both thisPixel and otherPixel are already set compare the distances to the seeds
+			if (thisPixel.z == 0.0 && otherPixel.z == 0.0){
+				float distanceToThisPixelsPosition = distance(gl_FragCoord.xy, decodePosition(thisPixel.xy));
+				float distanceToOtherPixelsPosition = distance(gl_FragCoord.xy, decodePosition(otherPixel.xy));
+				
+				if (distanceToThisPixelsPosition < distanceToOtherPixelsPosition){
+					return thisPixel;
+				}
+				
+				// TODO: else if both distances are equal
+				
+				else if (distanceToThisPixelsPosition == distanceToOtherPixelsPosition){
+					if (offset.x != 0.0){
+						return thisPixel;
+					}
+					else {
+						return otherPixel;
+					}
+				}
+				
+				
+				else {
+					return otherPixel;
+				}
+			}
+		}
+		
+		void main(){
+			vec4 currentPixel = texture2D(u_Sampler, gl_FragCoord.xy / u_Resolution);
+			
+			currentPixel = jumpFlood(currentPixel, vec2(0, u_stepSize));
+			currentPixel = jumpFlood(currentPixel, vec2(u_stepSize, u_stepSize));
+			currentPixel = jumpFlood(currentPixel, vec2(u_stepSize, 0));
+			currentPixel = jumpFlood(currentPixel, vec2(u_stepSize, -u_stepSize));
+			currentPixel = jumpFlood(currentPixel, vec2(0, -u_stepSize));
+			currentPixel = jumpFlood(currentPixel, vec2(-u_stepSize, -u_stepSize));
+			currentPixel = jumpFlood(currentPixel, vec2(-u_stepSize, 0));
+			currentPixel = jumpFlood(currentPixel, vec2(-u_stepSize, u_stepSize));
+			
+			gl_FragColor = currentPixel;
+		}
+	</script>
+	
+	<script id="fShaderVoronoi" type="notjs">
+		precision highp float;
+		
+		uniform sampler2D u_ColorRamp;
+		uniform sampler2D u_JumpFloodTexture;
+		uniform vec2 u_Resolution;
+		// uniform float u_MaxTravelTime;
+		uniform float u_SliderParameter;
+		
+		void main(){
+			vec2 texCoords = gl_FragCoord.xy / u_Resolution;
+			vec4 object = texture2D(u_JumpFloodTexture, texCoords);
+
+			if (object.z == 0.0) {
+
+				if (object.w * 2.0 < 0.0 || object.w * 2.0 > u_SliderParameter) {  
+					// gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+					discard;	// refers to clearColor set in JS
+				} 
+				else {
+					vec4 rampColor = texture2D(u_ColorRamp, vec2(abs(object.w), 0.5));
+			      gl_FragColor = vec4(rampColor.rgb, rampColor.a * 0.9);
+				}
+
+			}
+			else {
+				gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+			}
+		}
+	</script>
+
+	<script id="fShaderFinal" type="notjs">
+		precision highp float;
+
+		uniform sampler2D u_ContextTexture;
+		uniform sampler2D u_FocusTexture;
+		uniform sampler2D u_MaskTexture;
+
+		uniform vec2 u_Resolution;
+		// uniform float u_SliderParameter;
+
+		void main(){
+			vec2 texCoords = gl_FragCoord.xy / u_Resolution;
+			vec4 contextColor = texture2D(u_ContextTexture, texCoords);
+			vec4 focusColor = texture2D(u_FocusTexture, texCoords);
+			vec4 maskValue = texture2D(u_MaskTexture, texCoords);
+
+			gl_FragColor = mix(contextColor, focusColor, maskValue.w);
+		}
+	</script>
+
+	<script id="fShaderDebug" type="notjs">
+		precision highp float;
+		
+		uniform sampler2D u_Sampler;
+		uniform vec2 u_Resolution;
+		
+		void main(){
+			gl_FragColor = texture2D(u_Sampler, gl_FragCoord.xy / u_Resolution);
+		}
+	</script>
+	
+  </body>
+</html>
