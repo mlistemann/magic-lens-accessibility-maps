@@ -28,11 +28,11 @@
       <div id="map"></div>      
       <form>
 		<div id="dropdown">
-			<select name="hallo" autocomplete="off">
-				<option onclick="drawTexture(contextTexture)">Isochrones</option>
-				<option onclick="drawTexture(focusTexture)">Lines</option>
-				<option onclick="drawTexture(maskTexture)">Mask</option>
-				<option onclick="clearScreen()">Basemap</option>
+			<select id="textures" autocomplete="off">
+				<option value="isochrones" onclick="drawTexture(contextTexture)">Isochrones</option>
+				<option value="lines" onclick="drawTexture(focusTexture)">Lines</option>
+				<option value="mask" onclick="drawTexture(maskTexture)">Mask</option>
+				<option value="basemap" onclick="clearScreen()">Basemap</option>
 			</select>
 		</div>
 		<div id="checkbox">			
