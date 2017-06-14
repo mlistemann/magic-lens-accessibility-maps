@@ -48,7 +48,7 @@ const MEASURE_RENDERING = false;
 let MEASURE_ID = 0;
 
 /* center berlin, default zoom */
-const DEFAULT_CENTER = [52.516285, 13.386181];
+const DEFAULT_CENTER = [52.467734, 13.292005];
 const DEFAULT_ZOOM = 10;
 
 /* default travel time, medium and operand */
@@ -127,7 +127,7 @@ function accessibility_map() {
     iconSize  : [28, 40],
     iconAnchor: [14, 40]
   });
-  MARKER_ORIGIN_PRIMAR = L.marker(DEFAULT_CENTER, {
+  MARKER_ORIGIN_PRIMAR = L.marker([52.516285, 13.386181], {
     draggable: true,
     icon     : whiteIcon
   }).addTo(M);
