@@ -443,12 +443,14 @@ function accessibility_map() {
   CONTROL_TIME.onSlideMove(function(values){
     TRAVEL_TIME = values[values.length - 1].time;
     // drawGL();
-    drawVoronoi(TRAVEL_TIME);
+    drawContext(TRAVEL_TIME);
+    drawTexture(contextTexture);
   });
   CONTROL_TIME.onSlideStop(function(values){
     TRAVEL_TIME = values[values.length - 1].time;
     // drawGL();
-    drawVoronoi(TRAVEL_TIME);
+    drawContext(TRAVEL_TIME);
+    drawTexture(contextTexture);
   });
   CONTROL_TIME.addTo(M);
   CONTROL_TIME.setPosition('topright');
