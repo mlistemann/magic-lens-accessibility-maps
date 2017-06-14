@@ -511,7 +511,63 @@ function accessibility_map() {
   });
 }
 
+function drawMarkerLens(){
+  const markerLens_checked = document.getElementById('magicLensMarker').checked;
 
+  if (markerLens_checked === true){
+    // MATRIX SETUP
+    const m4 = twgl.m4;
+    const projection = m4.perspective(50 * Math.PI / 180, C.width / C.height, 1, 100);
+    const camera = m4.lookAt([0, 0, 5], [0, 0, 0], [0, 1, 0]);
+    const view = m4.inverse(camera);
+    const viewProjection = m4.multiply(projection, view);
+    const inverseViewProjection = m4.inverse(viewProjection); 
+    // ----------------------------------
+
+    // FIRST MARKER
+    var pixelCoordinates = M.latLngToLayerPoint(MARKER_ORIGIN_PRIMAR.getLatLng());
+    console.log(pixelCoordinates);
+    var pos = getRelativeMarkerPosition(pixelCoordinates, C);
+    console.log(pos);
+    var markerX = pos.x / C.width * 2 - 1;
+    var markerY = pos.y / C.height * -2 + 1;
+    console.log(markerX + " | " + markerY);
+    var mouseWorldPos = m4.transformPoint(inverseViewProjection, [markerX, markerY, 0]);
+    var matrix = m4.translate(viewProjection, mouseWorldPos);
+    GL.useProgram(circleProgram);
+    GL.bindFramebuffer(GL.FRAMEBUFFER, FBO);
+    GL.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, maskTexture, 0);
+    checkFBO(GL); 
+    GL.clearColor(0.0, 0.0, 0.0, 0.0);
+    GL.clear(GL.COLOR_BUFFER_BIT);
+    GL.uniformMatrix4fv(circleProgram.u_matrix, false, matrix);
+    GL.bindBuffer(GL.ARRAY_BUFFER, circleBuffer);
+    GL.vertexAttribPointer(circleProgram.a_coord, 3, GL.FLOAT, false, 0, 0);
+    GL.enableVertexAttribArray(circleProgram.a_coord);
+    GL.drawArrays(GL.TRIANGLE_FAN, 0, numberOfVertices);
+
+    // SECOND MARKER
+    pixelCoordinates = M.latLngToLayerPoint(MARKER_ORIGIN_SECOND.getLatLng());
+    console.log(pixelCoordinates);
+    pos = getRelativeMarkerPosition(pixelCoordinates, C);
+    markerX = pos.x / C.width * 2 - 1;
+    markerY = pos.y / C.height * -2 + 1;
+    console.log(markerX + " | " + markerY);
+    mouseWorldPos = m4.transformPoint(inverseViewProjection, [markerX, markerY, 0]);
+    matrix = m4.translate(viewProjection, mouseWorldPos);
+    
+    GL.uniformMatrix4fv(circleProgram.u_matrix, false, matrix);
+    GL.drawArrays(GL.TRIANGLE_FAN, 0, numberOfVertices);
+    GL.bindBuffer(GL.ARRAY_BUFFER, null);
+    GL.bindFramebuffer(GL.FRAMEBUFFER, null);
+    GL.useProgram(null);
+
+    finalDraw();
+  }
+  else {
+    drawTexture(contextTexture);
+  }
+}
 function requestGltfTiles(tile, zoom, canvas) {
   'use strict';
 
@@ -981,11 +1037,11 @@ function drawCircle(matrix){
 
   GL.bindFramebuffer(GL.FRAMEBUFFER, FBO);
   GL.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, maskTexture, 0);
-  checkFBO(GL);
+  checkFBO(GL); 
 
   GL.clearColor(0.0, 0.0, 0.0, 0.0);
-  GL.clear(GL.COLOR_BUFFER_BIT);  
-  
+  GL.clear(GL.COLOR_BUFFER_BIT); 
+
   // UNIFORM MATRICES
   GL.uniformMatrix4fv(circleProgram.u_matrix, false, matrix);
   
@@ -1331,4 +1387,14 @@ function getNoPaddingNoBorderCanvasRelativeMousePosition(ev, target) {
   pos.y = pos.y * target.height / target.clientHeight;
 
   return pos;  
+}
+
+function getRelativeMarkerPosition(markerPos, target){
+  var rect = target.getBoundingClientRect();
+
+  var pos = {x: null, y: null};
+  pos.x = (markerPos.x - rect.left) * target.width / target.clientWidth;
+  pos.y = (markerPos.y - rect.top) * target.height / target.clientHeight;
+
+  return pos;
 }

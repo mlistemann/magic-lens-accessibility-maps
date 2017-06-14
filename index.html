@@ -31,12 +31,15 @@
 			<select name="hallo" autocomplete="off">
 				<option onclick="drawTexture(contextTexture)">Isochrones</option>
 				<option onclick="drawTexture(focusTexture)">Lines</option>
+				<option onclick="drawTexture(maskTexture)">Mask</option>
 				<option onclick="clearScreen()">Basemap</option>
 			</select>
 		</div>
 		<div id="checkbox">			
 			<input type="checkbox" id="magicLens" autocomplete="off">
 			<label for="magicLens"><i>Magic Lens</i></label>		<!-- autocomplete="off" is for not memorizing a previous checked checkbox and start "clean"-->
+			<input type="checkbox" id="magicLensMarker" autocomplete="off" onclick="drawMarkerLens()">
+			<label for="magicLensMarker"><i>Magic Lens Marker</i></label>
 		</div>
       </form>
 
@@ -65,7 +68,7 @@
       header { margin-top: -1.5em; height: 1.5em; padding-left: 1.5em; background: #00341B; color: #D9D9D9 }
       #map { min-height: 100% }
       /*#dropdown { padding: 1.5em 0; position: absolute; top: 50px; right: 8px }*/
-      #magicLens {margin: auto}
+      #magicLens, #magicLensMarker {margin: auto}
       form {display: inline-block; padding: 1.5em 0; position: absolute; top: 50px; right: 8px}
       label { display: inline-block; margin: auto }
       footer { margin-bottom: -1.5em; height: 1.5em; padding-left: 1.5em; background: #00341B; color: #D9D9D9 }
