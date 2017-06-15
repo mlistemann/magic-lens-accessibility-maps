@@ -1187,6 +1187,25 @@ function drawContext(sliderValue){
   GL.useProgram(null);
 }
 
+function dropdown(){  
+    let selects = document.getElementById('textures');
+    let selectedValue = selects.options[selects.selectedIndex].value;
+    switch (selectedValue){
+      case "isochrones":
+        drawTexture(contextTexture);
+        break;
+      case "lines":
+        drawTexture(focusTexture);
+        break;
+      case "mask":
+        drawTexture(maskTexture);
+        break;
+      case "basemap":
+        clearScreen();
+        break;
+    }
+}
+
 function drawTexture(texture) {
   GL.useProgram(debugProgram);
 
