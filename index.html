@@ -11,16 +11,11 @@
 
 <html>
   <head>
-    <title>Focus+Context Visualization (Magic Lens) for Accessbility Maps</title>
+    <title>Focus+Context Visualization (Magic Lens) for Reachability Maps</title>
   </head>
 
   <body onload="accessibility_map()">
     <div id="map-wrap">
-
-      <!-- header note -->
-      <header><strong>Note</strong>: This is not a production-ready application,
-        but rather a proof-of-concept for a glTF-based network rendering
-        technique. Parameter hash <span id="hash">0</span>.</header>
 
       <!-- map canvas -->
       <div id="map"></div>      
@@ -35,20 +30,11 @@
 		</div>
 		<div id="checkbox">			
 			<input type="checkbox" id="magicLens" autocomplete="off">
-			<label for="magicLens"><i>Magic Lens</i></label>		<!-- autocomplete="off" is for not memorizing a previous checked checkbox and start "clean"-->
+			<label for="magicLens"><i>Magic Lens</i></label>
 			<input type="checkbox" id="magicLensMarker" autocomplete="off" onclick="drawMarkerLens()">
 			<label for="magicLensMarker"><i>Magic Lens Marker</i></label>
 		</div>
       </form>
-
-      <!-- debug footer -->
-      <footer>Network loaded [<span id="bar">----------</span>]
-        <span id="perc">0.00</span>%, <span id="calls">0</span> WebGL draw
-        call(s) in <span id="timer">0</span> ms (<span id="frames">0</span>
-        FPS). Loaded primitives: <span id="vertex">0</span> nodes (
-        <span id="index">0</span> lines). Tiles in cache:
-        <span id="tiles">0</span>.</footer>
-    </div>
 
     <!-- styles -->
     <link rel="stylesheet" href="./lib/jquery-ui-bootstrap/css/custom-theme/jquery-ui-1.10.0.custom.css" />
@@ -62,18 +48,14 @@
     <style>
       html { min-height: 100% }
       body { min-height: 100%; margin: 0; padding: 0 }
-      #map-wrap { padding: 1.5em 0; position: absolute; top: 0; bottom: 0; left: 0; right: 0 }
-      header { margin-top: -1.5em; height: 1.5em; padding-left: 1.5em; background: #00341B; color: #D9D9D9 }
+      #map-wrap { padding: 0; position: absolute; top: 0; bottom: 0; left: 0; right: 0 }
       #map { min-height: 100% }
       /*#dropdown { padding: 1.5em 0; position: absolute; top: 50px; right: 8px }*/
       #magicLens, #magicLensMarker {margin: auto}
       form {display: inline-block; padding: 1.5em 0; position: absolute; top: 50px; right: 8px}
       label { display: inline-block; margin: auto }
-      footer { margin-bottom: -1.5em; height: 1.5em; padding-left: 1.5em; background: #00341B; color: #D9D9D9 }
     </style>
 	
-	<!-- data -->
-	<script src="./600.gltf"></script>
 
     <!-- libs -->
     <script src="./lib/jquery/jquery-2.2.3.js"></script>
@@ -128,20 +110,14 @@
     </script>
 	
 	<script id="fShaderInit" type="notjs">
-		// #version 200
-		// #extension GL_EXT_draw_buffers : require
-
 		precision highp float;
 		
 		uniform vec2 u_Resolution;
-		// uniform float u_MaxTravelTime;	// between [0,2] where 2 = 120min
 
       varying float v_coord;
 
       void main(void) {
         float t_coord = v_coord / 2.0;
-        // gl_FragData[0] = vec4(gl_FragCoord.xy / u_Resolution, 0.0, t_coord); 
-        // gl_FragData[1] = vec4(gl_FragCoord.xy / u_Resolution, 0.0, t_coord); 
         gl_FragColor = vec4(gl_FragCoord.xy / u_Resolution, 0.0, t_coord);
       }
 	</script>
@@ -233,8 +209,6 @@
 					return thisPixel;
 				}
 				
-				// TODO: else if both distances are equal
-				
 				else if (distanceToThisPixelsPosition == distanceToOtherPixelsPosition){
 					if (offset.x != 0.0){
 						return thisPixel;
@@ -242,8 +216,7 @@
 					else {
 						return otherPixel;
 					}
-				}
-				
+				}				
 				
 				else {
 					return otherPixel;
@@ -273,7 +246,6 @@
 		uniform sampler2D u_ColorRamp;
 		uniform sampler2D u_JumpFloodTexture;
 		uniform vec2 u_Resolution;
-		// uniform float u_MaxTravelTime;
 		uniform float u_SliderParameter;
 		
 		void main(){
@@ -282,8 +254,7 @@
 
 			if (object.z == 0.0) {
 
-				if (object.w * 2.0 < 0.0 || object.w * 2.0 > u_SliderParameter) {  
-					// gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+				if (object.w * 2.0 < 0.0 || object.w * 2.0 > u_SliderParameter) { 
 					discard;	// refers to clearColor set in JS
 				} 
 				else {
@@ -317,7 +288,7 @@
 			gl_FragColor = mix(contextColor, focusColor, maskValue.w);
 		}
 	</script>
-
+	
 	<script id="fShaderDebug" type="notjs">
 		precision highp float;
 		
@@ -328,6 +299,5 @@
 			gl_FragColor = texture2D(u_Sampler, gl_FragCoord.xy / u_Resolution);
 		}
 	</script>
-	
   </body>
 </html>

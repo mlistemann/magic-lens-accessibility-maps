@@ -99,16 +99,13 @@ function loadColorRamp(img, callback){
 }
 
 /**
- * initialize the distance map visualization
+ * MAIN FUNCTION FOR GLTF-BASED REACHABILITY VISUALIZATION
+ *
  */
 function accessibility_map() {
   'use strict';
 
-  /* increase timeouts for slow development server */
   r360.config.requestTimeout = 60000;
-
-  /* load r360 color gradient */
-  // TEXTURE_IMAGE.src = "img/mi-r360.png";
 
   /* leaflet map canvas */
   M = L.map('map', {
@@ -144,146 +141,10 @@ function accessibility_map() {
   O.canvas.width = C.clientWidth;
   O.canvas.height = C.clientHeight;
 
-  /* initialize webgl on canvas overlay */
+  /* initialize webgl */
 	var gl_Original = initWebGL(C);
 	GL = WebGLDebugUtils.makeDebugContext(gl_Original);
   
-  let   vShaderInit = document.getElementById("vShaderInit").text,
-        fShaderFocus = document.getElementById("fShaderFocus").text,
-        fShaderInit = document.getElementById("fShaderInit").text,
-        vShaderQuad = document.getElementById("vShaderQuad").text,
-        fShaderDebug = document.getElementById("fShaderDebug").text,
-        vShaderCircle = document.getElementById("vShaderCircle").text,
-        fShaderCircle = document.getElementById("fShaderCircle").text,
-        fShaderVoronoi = document.getElementById("fShaderVoronoi").text,
-        fShaderJFA = document.getElementById("fShaderJFA").text,
-        fShaderFinal = document.getElementById("fShaderFinal").text;
-	
-  focusProgram = createProgram(GL, vShaderInit, fShaderFocus);
-	initProgram = createProgram(GL, vShaderInit, fShaderInit);
-	jfaProgram = createProgram(GL, vShaderQuad, fShaderJFA);
-  circleProgram = createProgram(GL, vShaderCircle, fShaderCircle);
-	voronoiProgram = createProgram(GL, vShaderQuad, fShaderVoronoi);
-  finalProgram = createProgram(GL, vShaderQuad, fShaderFinal);
-  debugProgram = createProgram(GL, vShaderQuad, fShaderDebug);
-	
-	if (!focusProgram) {
-		console.log('Failed to intialize focusProgram.');
-		return;
-	}
-  else if (!debugProgram){
-    console.log('Failed to intialize debugProgram.');
-    return;
-  }
-  else if (!initProgram){
-    console.log('Failed to intialize initProgram.');
-    return;
-  }
-  else if (!jfaProgram){
-    console.log('Failed to intialize jfaProgram.');
-    return;
-  }
-  else if (!circleProgram){
-    console.log('Failed to intialize circleProgram.');
-    return;
-  }
-  else if (!voronoiProgram){
-    console.log('Failed to intialize voronoiProgram.');
-    return;
-  }
-  else if (!finalProgram){
-    console.log('Failed to intialize finalProgram.');
-    return;
-  }
-
-	
-  focusProgram.u_matrix = GL.getUniformLocation(focusProgram, "u_matrix");
-  focusProgram.a_vertex = GL.getAttribLocation(focusProgram, "a_vertex");
-  focusProgram.a_coord = GL.getAttribLocation(focusProgram, "a_coord");
-  focusProgram.u_ColorRamp = GL.getUniformLocation(focusProgram, "u_ColorRamp");
-  focusProgram.u_MaxTravelTime = GL.getUniformLocation(focusProgram, "u_MaxTravelTime");
-
-	debugProgram.a_Position = GL.getAttribLocation(debugProgram, "a_Position");
-	debugProgram.u_Sampler = GL.getUniformLocation(debugProgram, "u_Sampler");
-	debugProgram.u_Resolution = GL.getUniformLocation(debugProgram, "u_Resolution");
-	
-  initProgram.u_matrix = GL.getUniformLocation(initProgram, "u_matrix");
-  initProgram.a_vertex = GL.getAttribLocation(initProgram, "a_vertex");
-  initProgram.a_coord = GL.getAttribLocation(initProgram, "a_coord");
-  initProgram.u_Resolution = GL.getUniformLocation(initProgram, "u_Resolution");
-  // initProgram.travelTime = GL.getUniformLocation(initProgram, "u_MaxTravelTime");
-	
-	jfaProgram.a_Position = GL.getAttribLocation(jfaProgram, "a_Position");
-	jfaProgram.u_Sampler = GL.getUniformLocation(jfaProgram, "u_Sampler");
-	jfaProgram.u_stepSize = GL.getUniformLocation(jfaProgram, "u_stepSize");
-	jfaProgram.u_Resolution = GL.getUniformLocation(jfaProgram, "u_Resolution");
-
-  circleProgram.a_coord = GL.getAttribLocation(circleProgram, "a_coord");
-  circleProgram.u_matrix = GL.getUniformLocation(circleProgram, "u_matrix");
-	
-	voronoiProgram.a_Position = GL.getAttribLocation(voronoiProgram, "a_Position");
-	voronoiProgram.u_ColorRamp = GL.getUniformLocation(voronoiProgram, "u_ColorRamp");
-	voronoiProgram.u_JumpFloodTexture = GL.getUniformLocation(voronoiProgram, "u_JumpFloodTexture");
-	voronoiProgram.u_Resolution = GL.getUniformLocation(voronoiProgram, "u_Resolution");
-  // voronoiProgram.u_MaxTravelTime = GL.getUniformLocation(voronoiProgram, "u_MaxTravelTime");
-  voronoiProgram.u_SliderParameter = GL.getUniformLocation(voronoiProgram, "u_SliderParameter");
-
-  finalProgram.a_Position = GL.getAttribLocation(finalProgram, "a_Position");
-  finalProgram.u_ContextTexture = GL.getUniformLocation(finalProgram, "u_ContextTexture");
-  finalProgram.u_FocusTexture = GL.getUniformLocation(finalProgram, "u_FocusTexture");
-  finalProgram.u_MaskTexture = GL.getUniformLocation(finalProgram, "u_MaskTexture");
-  finalProgram.u_Resolution = GL.getUniformLocation(finalProgram, "u_Resolution");
-  // finalProgram.u_SliderParameter = GL.getUniformLocation(finalProgram, "u_SliderParameter");
-	
-	if (debugProgram.a_Position < 0 || debugProgram.u_Sampler < 0 || debugProgram.u_Resolution < 0 ||
-		jfaProgram.a_Position < 0 || jfaProgram.u_Sampler < 0 || jfaProgram.u_stepSize < 0 || jfaProgram.u_Resolution < 0 ||
-		voronoiProgram.a_Position < 0 || voronoiProgram.u_ColorRamp < 0 || voronoiProgram.u_JumpFloodTexture < 0 || voronoiProgram.u_Resolution < 0 || voronoiProgram.u_MaxTravelTime < 0 || voronoiProgram.u_SliderParameter < 0 ||
-		initProgram.uniformMatrix < 0 || initProgram.vertexPosition < 0 || initProgram.textureCoord < 0 || initProgram.u_Resolution < 0 || initProgram.travelTime < 0) {
-		console.log('Failed to get attribute and uniform locations. Maybe the function does not know which shader program to use.');
-		return false;
-	}
-	
-	// FBO INITIALIZATION
-	FBO = initFBO(GL);
-	
-	// TEXTURE INITIALIZATION
-  focusTexture = initEmptyTexture(GL, C);
-  contextTexture = initEmptyTexture(GL, C);
-	readTexture = initEmptyTexture(GL, C);
-	writeTexture = initEmptyTexture(GL, C);
-  maskTexture = initEmptyTexture(GL, C);
-
-  //* generate texture from color gradient */
-  loadColorRamp(TEXTURE_IMAGE, function(){
-    colorRamp = GL.createTexture();
-    GL.bindTexture(GL.TEXTURE_2D, colorRamp);
-    GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
-    GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
-    GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
-    GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
-    GL.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, TEXTURE_IMAGE);
-    GL.bindTexture(GL.TEXTURE_2D, null);
-  });
-
-
-	// QUAD BUFFER FOR SCREEN-ALIGNED QUAD
-  let quadVertices = new Float32Array([
-      -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0
-    ]);
-  
-  quadBuffer = GL.createBuffer();
-  circleBuffer = GL.createBuffer();
-  if (!quadBuffer || !circleBuffer) {
-    console.log('Failed to create the buffer object');
-    return null;
-  }
-  
-  GL.bindBuffer(GL.ARRAY_BUFFER, quadBuffer);
-  GL.bufferData(GL.ARRAY_BUFFER, quadVertices, GL.STATIC_DRAW);
-  GL.bindBuffer(GL.ARRAY_BUFFER, null);
-
-  initCircle();
-
   let attribution =
     '<a href="https://carto.com/location-data-services/basemaps/">CartoDB</a> | '
     + '<a href="https://developers.route360.net/index.html">Route360 API</a> | '
@@ -341,6 +202,143 @@ function accessibility_map() {
     requestGltfTiles(tile, zoom, canvas);
   };
   GLTF_TILES.addTo(M);
+
+  /* shader initialization */
+  let   vShaderInit = document.getElementById("vShaderInit").text,
+        fShaderFocus = document.getElementById("fShaderFocus").text,
+        fShaderInit = document.getElementById("fShaderInit").text,
+        fShaderDebug = document.getElementById("fShaderDebug").text,
+        vShaderQuad = document.getElementById("vShaderQuad").text,
+        vShaderCircle = document.getElementById("vShaderCircle").text,
+        fShaderCircle = document.getElementById("fShaderCircle").text,
+        fShaderVoronoi = document.getElementById("fShaderVoronoi").text,
+        fShaderJFA = document.getElementById("fShaderJFA").text,
+        fShaderFinal = document.getElementById("fShaderFinal").text;
+  
+  focusProgram = createProgram(GL, vShaderInit, fShaderFocus);
+  initProgram = createProgram(GL, vShaderInit, fShaderInit);
+  jfaProgram = createProgram(GL, vShaderQuad, fShaderJFA);
+  circleProgram = createProgram(GL, vShaderCircle, fShaderCircle);
+  voronoiProgram = createProgram(GL, vShaderQuad, fShaderVoronoi);
+  finalProgram = createProgram(GL, vShaderQuad, fShaderFinal);
+  debugProgram = createProgram(GL, vShaderQuad, fShaderDebug);
+
+  if (!focusProgram) {
+    console.log('Failed to intialize focusProgram.');
+    return;
+  }
+  else if (!debugProgram){
+    console.log('Failed to intialize debugProgram.');
+    return;
+  }
+  else if (!initProgram){
+    console.log('Failed to intialize initProgram.');
+    return;
+  }
+  else if (!jfaProgram){
+    console.log('Failed to intialize jfaProgram.');
+    return;
+  }
+  else if (!circleProgram){
+    console.log('Failed to intialize circleProgram.');
+    return;
+  }
+  else if (!voronoiProgram){
+    console.log('Failed to intialize voronoiProgram.');
+    return;
+  }
+  else if (!finalProgram){
+    console.log('Failed to intialize finalProgram.');
+    return;
+  }
+  
+  focusProgram.u_matrix = GL.getUniformLocation(focusProgram, "u_matrix");
+  focusProgram.a_vertex = GL.getAttribLocation(focusProgram, "a_vertex");
+  focusProgram.a_coord = GL.getAttribLocation(focusProgram, "a_coord");
+  focusProgram.u_ColorRamp = GL.getUniformLocation(focusProgram, "u_ColorRamp");
+  focusProgram.u_MaxTravelTime = GL.getUniformLocation(focusProgram, "u_MaxTravelTime");
+
+  debugProgram.a_Position = GL.getAttribLocation(debugProgram, "a_Position");
+  debugProgram.u_Sampler = GL.getUniformLocation(debugProgram, "u_Sampler");
+  debugProgram.u_Resolution = GL.getUniformLocation(debugProgram, "u_Resolution");
+    
+  initProgram.u_matrix = GL.getUniformLocation(initProgram, "u_matrix");
+  initProgram.a_vertex = GL.getAttribLocation(initProgram, "a_vertex");
+  initProgram.a_coord = GL.getAttribLocation(initProgram, "a_coord");
+  initProgram.u_Resolution = GL.getUniformLocation(initProgram, "u_Resolution");
+  // initProgram.travelTime = GL.getUniformLocation(initProgram, "u_MaxTravelTime");
+  
+  jfaProgram.a_Position = GL.getAttribLocation(jfaProgram, "a_Position");
+  jfaProgram.u_Sampler = GL.getUniformLocation(jfaProgram, "u_Sampler");
+  jfaProgram.u_stepSize = GL.getUniformLocation(jfaProgram, "u_stepSize");
+  jfaProgram.u_Resolution = GL.getUniformLocation(jfaProgram, "u_Resolution");
+
+  circleProgram.a_coord = GL.getAttribLocation(circleProgram, "a_coord");
+  circleProgram.u_matrix = GL.getUniformLocation(circleProgram, "u_matrix");
+  
+  voronoiProgram.a_Position = GL.getAttribLocation(voronoiProgram, "a_Position");
+  voronoiProgram.u_ColorRamp = GL.getUniformLocation(voronoiProgram, "u_ColorRamp");
+  voronoiProgram.u_JumpFloodTexture = GL.getUniformLocation(voronoiProgram, "u_JumpFloodTexture");
+  voronoiProgram.u_Resolution = GL.getUniformLocation(voronoiProgram, "u_Resolution");
+  // voronoiProgram.u_MaxTravelTime = GL.getUniformLocation(voronoiProgram, "u_MaxTravelTime");
+  voronoiProgram.u_SliderParameter = GL.getUniformLocation(voronoiProgram, "u_SliderParameter");
+
+  finalProgram.a_Position = GL.getAttribLocation(finalProgram, "a_Position");
+  finalProgram.u_ContextTexture = GL.getUniformLocation(finalProgram, "u_ContextTexture");
+  finalProgram.u_FocusTexture = GL.getUniformLocation(finalProgram, "u_FocusTexture");
+  finalProgram.u_MaskTexture = GL.getUniformLocation(finalProgram, "u_MaskTexture");
+  finalProgram.u_Resolution = GL.getUniformLocation(finalProgram, "u_Resolution");
+  // finalProgram.u_SliderParameter = GL.getUniformLocation(finalProgram, "u_SliderParameter");
+  
+  if (debugProgram.a_Position < 0 || debugProgram.u_Sampler < 0 || debugProgram.u_Resolution < 0 ||
+    jfaProgram.a_Position < 0 || jfaProgram.u_Sampler < 0 || jfaProgram.u_stepSize < 0 || jfaProgram.u_Resolution < 0 ||
+    voronoiProgram.a_Position < 0 || voronoiProgram.u_ColorRamp < 0 || voronoiProgram.u_JumpFloodTexture < 0 || voronoiProgram.u_Resolution < 0 || voronoiProgram.u_MaxTravelTime < 0 || voronoiProgram.u_SliderParameter < 0 ||
+    initProgram.uniformMatrix < 0 || initProgram.vertexPosition < 0 || initProgram.textureCoord < 0 || initProgram.u_Resolution < 0 || initProgram.travelTime < 0) {
+    console.log('Failed to get attribute and uniform locations. Maybe the function does not know which shader program to use.');
+    return false;
+  }
+  
+  // FBO INITIALIZATION
+  FBO = initFBO(GL);
+  
+  // TEXTURE INITIALIZATION
+  focusTexture = initEmptyTexture(GL, C);
+  contextTexture = initEmptyTexture(GL, C);
+  readTexture = initEmptyTexture(GL, C);
+  writeTexture = initEmptyTexture(GL, C);
+  maskTexture = initEmptyTexture(GL, C);
+
+  //* generate texture from color gradient */
+  loadColorRamp(TEXTURE_IMAGE, function(){
+    colorRamp = GL.createTexture();
+    GL.bindTexture(GL.TEXTURE_2D, colorRamp);
+    GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
+    GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
+    GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
+    GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
+    GL.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, TEXTURE_IMAGE);
+    GL.bindTexture(GL.TEXTURE_2D, null);
+  });
+
+
+  // QUAD BUFFER FOR SCREEN-ALIGNED QUAD
+  let quadVertices = new Float32Array([
+      -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0
+    ]);
+  
+  quadBuffer = GL.createBuffer();
+  circleBuffer = GL.createBuffer();
+  if (!quadBuffer || !circleBuffer) {
+    console.log('Failed to create the buffer object');
+    return null;
+  }
+  
+  GL.bindBuffer(GL.ARRAY_BUFFER, quadBuffer);
+  GL.bufferData(GL.ARRAY_BUFFER, quadVertices, GL.STATIC_DRAW);
+  GL.bindBuffer(GL.ARRAY_BUFFER, null);
+
+  /* compute circle vertex data */
+  initCircle();
 
   CONTROL_MEDIUM = r360.radioButtonControl({
     buttons: [
@@ -507,34 +505,31 @@ function accessibility_map() {
 
   L.control.zoom({ position: 'bottomright' }).addTo(M);
 
-  // MATRIX SETUP
+  /* transformation matrix for circle lens */
   const m4 = twgl.m4;
   const projection = m4.perspective(50 * Math.PI / 180, C.width / C.height, 1, 100);
   const camera = m4.lookAt([0, 0, 5], [0, 0, 0], [0, 1, 0]);
   const view = m4.inverse(camera);
   const viewProjection = m4.multiply(projection, view);
   const inverseViewProjection = m4.inverse(viewProjection); 
-  // ----------------------------------
 
+  /* event listener for the 'mouse lens' */
   C.addEventListener("mousemove", e => {
       const magicLens_checked = document.getElementById('magicLens').checked;
 
       if (magicLens_checked === true) {        
-        /* mapping of canvas coordinates to webgl coordinates */
+        /* mapping of canvas coordinates to webgl clip space coordinates */
         var pos = getNoPaddingNoBorderCanvasRelativeMousePosition(e, C);
         const mousePositionX = pos.x / C.width * 2 - 1;
         const mousePositionY = pos.y / C.height * -2 + 1;
-
-        // transform mouse coordinates to world space by the inverse view projection matrix
         const mouseWorldPos = m4.transformPoint(inverseViewProjection, [mousePositionX, mousePositionY, 0]);
-
-        // add that world position to our matrix
         const matrix = m4.translate(viewProjection, mouseWorldPos);
 
         // DRAW CIRCLE INTO FBO ATTACHMENT
         drawCircle(matrix);
 
-        finalDraw();
+        // MIX CIRCLE-, FOCUS- AND CONTEXT TEXTURES
+        composite();
       }
   });
 }
@@ -585,7 +580,7 @@ function drawMarkerLens(){
     GL.bindFramebuffer(GL.FRAMEBUFFER, null);
     GL.useProgram(null);
 
-    finalDraw();
+    composite();
   }
   else {
     drawTexture(contextTexture);
@@ -684,186 +679,34 @@ function requestTile(x, y, z, callback) {
 function drawGL() {
   'use strict';
 
-  /* only proceed if context is available */
   if (GL) {
+
     // DRAW LINES INTO FOCUS TEXTURE
     drawFocus();
 
-    // ----------------------------DRAW LINES INTO READ TEXTURE----------------------------------------
-    GL.useProgram(initProgram);
-
-    // CHANGE THE DRAWING DESTINATION TO readTexture
-    GL.bindFramebuffer(GL.FRAMEBUFFER, FBO);
-    GL.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, readTexture, 0); 
-    checkFBO(GL);
-
-    /* clear color buffer for redraw */
-    // SET CLEAR COLOR TO INVALID SEED COLOR
-    GL.clearColor(0.0, 0.0, 1.0, 0.0);
-    GL.clear(GL.COLOR_BUFFER_BIT);
-
-    /* set view port to canvas size */
-    GL.viewport(0, 0, C.width, C.height);
-
-     /* get map bounds and top left corner used for webgl translation later */
-    const bounds = M.getBounds();
-    const topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest());
-
-    /* precalculate map scale, offset and line width */
-    const zoom = M.getZoom();
-    const scale = Math.pow(2, zoom) * 256.0;
-    const offset = normalizeLatLon(topLeft.lat, topLeft.lng);
-    const width = Math.max(zoom - 12.0, 1.0);
-
-    /* define sizes of vertex and texture coordinate buffer objects */
-    const vertexSize = 2;
-    const texSize = 1;
-
-    /* define model view matrix. here: identity */
-    let uMatrix = new Float32Array([
-      1,0,0,0,
-      0,1,0,0,
-      0,0,1,0,
-      0,0,0,1
-    ]);
-
-    /* translate to move [0,0] to top left corner */
-    translateMatrix(uMatrix, -1, 1);
-
-    /* scale based on canvas width and height */
-    scaleMatrix(uMatrix, 2.0 / C.width, -2.0 / C.height);
-
-    /* scale based on map zoom scale */
-    scaleMatrix(uMatrix, scale, scale);
-
-    /* translate offset to match current map position (lat/lon) */
-    translateMatrix(uMatrix, -offset.x, -offset.y);
-
-    /* set model view */
-    GL.uniformMatrix4fv(initProgram.u_matrix, false, uMatrix);
-
-    /* adjust line width based on zoom */
-    GL.lineWidth(width);
-
-    let vertexCount = 0;
-    let indexCount = 0;
-    let drawCount = 0;
-
-    GL.uniform2f(initProgram.u_Resolution, C.width, C.height);
-
-    /* loop all tile buffers in cache and draw each geometry */
-    const tileBuffers = TILE_CACHE.getTileBufferCollection();
-
-    // DRAW LINES
-    for (let i = TILE_CACHE.getSize() - 1; i >= 0; i -= 1) {
-      /* only render tiles for current zoom level */
-      if(tileBuffers[i].getZoom() == M.getZoom()) {
-
-        vertexCount += tileBuffers[i].getVertexBuffer().length / 2.0;
-
-        /* create vertex buffer */
-        let vertexBuffer = GL.createBuffer();
-        GL.bindBuffer(GL.ARRAY_BUFFER, vertexBuffer);
-        GL.bufferData(
-          GL.ARRAY_BUFFER,
-          tileBuffers[i].getVertexBuffer(),
-          GL.STATIC_DRAW
-        );
-        GL.enableVertexAttribArray(initProgram.a_vertex);
-        GL.vertexAttribPointer(
-          initProgram.a_vertex,
-          vertexSize,
-          GL.FLOAT,
-          false,
-          0,
-          0
-        );
-
-        /* create texture coordinate buffer */
-        let textureBuffer = GL.createBuffer();
-        GL.bindBuffer(GL.ARRAY_BUFFER, textureBuffer);
-        GL.bufferData(
-          GL.ARRAY_BUFFER,
-          tileBuffers[i].getColorBuffer(),
-          GL.STATIC_DRAW
-        );
-        GL.enableVertexAttribArray(initProgram.a_coord);
-        GL.vertexAttribPointer(
-          initProgram.a_coord,
-          texSize,
-          GL.FLOAT,
-          false,
-          0,
-          0
-        );
-
-        indexCount += tileBuffers[i].getIndexBuffer().length / 2.0;
-
-        /* create index buffer */
-        let indexBuffer = GL.createBuffer();
-        GL.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, indexBuffer);
-
-        /* draw geometry lines by indices */
-        if (tileBuffers[i].getIndexBuffer().length > 65535) {
-          /* use 32 bit extension */
-          const ext = (
-            GL.getExtension('OES_element_index_uint') ||
-            GL.getExtension('MOZ_OES_element_index_uint') ||
-            GL.getExtension('WEBKIT_OES_element_index_uint')
-          );
-
-          const buffer = new Uint32Array(tileBuffers[i].getIndexBuffer());
-          GL.bufferData(GL.ELEMENT_ARRAY_BUFFER, buffer, GL.STATIC_DRAW);
-          GL.drawElements(
-            GL.LINES,
-            tileBuffers[i].getIndexBuffer().length,
-            GL.UNSIGNED_INT,
-            indexBuffer
-          );
-      
-        } else {
-
-          /* fall back to webgl default 16 bit short */     
-          const buffer = new Uint16Array(tileBuffers[i].getIndexBuffer());
-          GL.bufferData(GL.ELEMENT_ARRAY_BUFFER, buffer, GL.STATIC_DRAW);
-          GL.drawElements(
-            GL.LINES,
-            tileBuffers[i].getIndexBuffer().length,
-            GL.UNSIGNED_SHORT,
-            indexBuffer
-          );
-        }
-      }
-    }
-
-    // UNBINDING
-    GL.bindFramebuffer(GL.FRAMEBUFFER, null);
-    GL.bindBuffer(GL.ARRAY_BUFFER, null);
-    GL.bindTexture(GL.TEXTURE_2D, null);
-    GL.useProgram(null);
-	
-  	let stepSize = nearestPow2(C.width) / 2;   // perhaps useful for OpenGL performance issues (see: https://bocoup.com/blog/find-the-closest-power-of-2-with-javascript)
-  	
+    // DRAW LINES INTO READ TEXTURE
+    initSeedTexture();
+	 
     // JUMP FLOODING
+  	let stepSize = nearestPow2(C.width) / 2;
   	while (stepSize >= 1){
   		jumpFlood(stepSize);  			
   		swapTextures();
   		stepSize /= 2;
   	}
-
   	swapTextures();
 
+    // COLOR MAPPING OF JFA RESULT
     drawContext(TRAVEL_TIME);
-    drawTexture(contextTexture);
 
+    // DRAW CONTENT OF CONTEXT TEXTURE AS DEFAULT VIEW
+    drawTexture(contextTexture);
   }
 }
 
-function nearestPow2( aSize ){
-  return Math.pow( 2, Math.round( Math.log( aSize ) / Math.log( 2 ) ) ); 
-}
+/* DRAW CALL FUNCTIONS FOR SEPARATE SHADERS */
 
-function finalDraw(){
+function composite(){
   GL.useProgram(finalProgram);
   
   GL.clearColor(0.0, 0.0, 0.0, 0.0);
@@ -896,35 +739,6 @@ function finalDraw(){
   GL.bindBuffer(GL.ARRAY_BUFFER, null);
   GL.bindTexture(GL.TEXTURE_2D, null);
   GL.useProgram(null);
-
-}
-
-function initCircle(){
-
-  // DATA COMPUTATION
-  
-  circleVerticesX[0] = centerX;
-  circleVerticesY[0] = centerY;
-  circleVerticesZ[0] = centerZ;
-  
-  allCircleVertices.push(circleVerticesX[0]);
-  allCircleVertices.push(circleVerticesY[0]);
-  allCircleVertices.push(circleVerticesZ[0]);
-  
-  for (var i = 1; i < numberOfVertices; i++){
-    circleVerticesX[i] = centerX + (radius * Math.cos(i * (2.0 * Math.PI) / numberOfTriangles));
-    circleVerticesY[i] = centerY + (radius * Math.sin(i * (2.0 * Math.PI) / numberOfTriangles));
-    circleVerticesZ[i] = centerZ;
-    allCircleVertices.push(circleVerticesX[i]);
-    allCircleVertices.push(circleVerticesY[i]);
-    allCircleVertices.push(circleVerticesZ[i]);
-  }
-  
-  var circleVertices = new Float32Array(allCircleVertices);
-  
-  GL.bindBuffer(GL.ARRAY_BUFFER, circleBuffer);
-  GL.bufferData(GL.ARRAY_BUFFER, circleVertices, GL.STATIC_DRAW);
-  GL.bindBuffer(GL.ARRAY_BUFFER, null);
 }
 
 function drawCircle(matrix){
@@ -953,7 +767,6 @@ function drawCircle(matrix){
   GL.bindBuffer(GL.ARRAY_BUFFER, null);
   GL.bindFramebuffer(GL.FRAMEBUFFER, null);
   GL.useProgram(null);
-
 }
 
 function jumpFlood(stepLength){
@@ -986,164 +799,317 @@ function jumpFlood(stepLength){
 
 function drawFocus(){
 
-    GL.useProgram(focusProgram);
+  GL.useProgram(focusProgram);
 
-      // CHANGE THE DRAWING DESTINATION TO FBO COLOR_ATTACHMENT
-    GL.bindFramebuffer(GL.FRAMEBUFFER, FBO);
-    GL.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, focusTexture, 0);  
-    checkFBO(GL);
+    // CHANGE THE DRAWING DESTINATION TO FBO COLOR_ATTACHMENT
+  GL.bindFramebuffer(GL.FRAMEBUFFER, FBO);
+  GL.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, focusTexture, 0);  
+  checkFBO(GL);
 
-    /* disable depth testing */
-    GL.disable(GL.DEPTH_TEST);
+  /* disable depth testing */
+  GL.disable(GL.DEPTH_TEST);
 
-    /* clear color buffer for redraw */
-    GL.clear(GL.COLOR_BUFFER_BIT);
+  /* clear color buffer for redraw */
+  GL.clear(GL.COLOR_BUFFER_BIT);
 
-    /* set view port to canvas size */
-    GL.viewport(0, 0, C.width, C.height);
+  /* set view port to canvas size */
+  GL.viewport(0, 0, C.width, C.height);
 
-     /* get map bounds and top left corner used for webgl translation later */
-    const bounds = M.getBounds();
-    const topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest());
+   /* get map bounds and top left corner used for webgl translation later */
+  const bounds = M.getBounds();
+  const topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest());
 
-    /* precalculate map scale, offset and line width */
-    const zoom = M.getZoom();
-    const scale = Math.pow(2, zoom) * 256.0;
-    const offset = normalizeLatLon(topLeft.lat, topLeft.lng);
-    const width = Math.max(zoom - 12.0, 1.0);
+  /* precalculate map scale, offset and line width */
+  const zoom = M.getZoom();
+  const scale = Math.pow(2, zoom) * 256.0;
+  const offset = normalizeLatLon(topLeft.lat, topLeft.lng);
+  const width = Math.max(zoom - 12.0, 1.0);
 
-    /* define sizes of vertex and texture coordinate buffer objects */
-    const vertexSize = 2;
-    const texSize = 1;
+  /* define sizes of vertex and texture coordinate buffer objects */
+  const vertexSize = 2;
+  const texSize = 1;
 
-    /* define model view matrix. here: identity */
-    let uMatrix = new Float32Array([
-      1,0,0,0,
-      0,1,0,0,
-      0,0,1,0,
-      0,0,0,1
-    ]);
+  /* define model view matrix. here: identity */
+  let uMatrix = new Float32Array([
+    1,0,0,0,
+    0,1,0,0,
+    0,0,1,0,
+    0,0,0,1
+  ]);
 
-    /* pass selected travel time to fragment shader */
-    GL.uniform1f(focusProgram.u_MaxTravelTime, TRAVEL_TIME / 3600.0);
+  /* pass selected travel time to fragment shader */
+  GL.uniform1f(focusProgram.u_MaxTravelTime, TRAVEL_TIME / 3600.0);
 
-    /* translate to move [0,0] to top left corner */
-    translateMatrix(uMatrix, -1, 1);
+  /* translate to move [0,0] to top left corner */
+  translateMatrix(uMatrix, -1, 1);
 
-    /* scale based on canvas width and height */
-    scaleMatrix(uMatrix, 2.0 / C.width, -2.0 / C.height);
+  /* scale based on canvas width and height */
+  scaleMatrix(uMatrix, 2.0 / C.width, -2.0 / C.height);
 
-    /* scale based on map zoom scale */
-    scaleMatrix(uMatrix, scale, scale);
+  /* scale based on map zoom scale */
+  scaleMatrix(uMatrix, scale, scale);
 
-    /* translate offset to match current map position (lat/lon) */
-    translateMatrix(uMatrix, -offset.x, -offset.y);
+  /* translate offset to match current map position (lat/lon) */
+  translateMatrix(uMatrix, -offset.x, -offset.y);
 
-    /* set model view */
-    GL.uniformMatrix4fv(focusProgram.u_matrix, false, uMatrix);
+  /* set model view */
+  GL.uniformMatrix4fv(focusProgram.u_matrix, false, uMatrix);
 
-    /* adjust line width based on zoom */
-    GL.lineWidth(width);
+  /* adjust line width based on zoom */
+  GL.lineWidth(width);
 
-    let vertexCount = 0;
-    let indexCount = 0;
-    let drawCount = 0;
+  let vertexCount = 0;
+  let indexCount = 0;
+  let drawCount = 0;
 
-    GL.activeTexture(GL.TEXTURE0);
-    GL.bindTexture(GL.TEXTURE_2D, colorRamp);
-    GL.uniform1i(focusProgram.u_ColorRamp, 0);
+  GL.activeTexture(GL.TEXTURE0);
+  GL.bindTexture(GL.TEXTURE_2D, colorRamp);
+  GL.uniform1i(focusProgram.u_ColorRamp, 0);
 
-    /* loop all tile buffers in cache and draw each geometry */
-    const tileBuffers = TILE_CACHE.getTileBufferCollection();
+  /* loop all tile buffers in cache and draw each geometry */
+  const tileBuffers = TILE_CACHE.getTileBufferCollection();
 
-    // DRAW LINES INTO ORIGIN TEXTURE
-    for (let i = TILE_CACHE.getSize() - 1; i >= 0; i -= 1) {
-      // console.log("TILE_CACHE.size: " + TILE_CACHE.getSize());
-      /* only render tiles for current zoom level */
-      if(tileBuffers[i].getZoom() == M.getZoom()) {
+  // DRAW LINES INTO ORIGIN TEXTURE
+  for (let i = TILE_CACHE.getSize() - 1; i >= 0; i -= 1) {
+    // console.log("TILE_CACHE.size: " + TILE_CACHE.getSize());
+    /* only render tiles for current zoom level */
+    if(tileBuffers[i].getZoom() == M.getZoom()) {
 
-        vertexCount += tileBuffers[i].getVertexBuffer().length / 2.0;
+      vertexCount += tileBuffers[i].getVertexBuffer().length / 2.0;
 
-        /* create vertex buffer */
-        let vertexBuffer = GL.createBuffer();
-        GL.bindBuffer(GL.ARRAY_BUFFER, vertexBuffer);
-        GL.bufferData(
-          GL.ARRAY_BUFFER,
-          tileBuffers[i].getVertexBuffer(),
-          GL.STATIC_DRAW
+      /* create vertex buffer */
+      let vertexBuffer = GL.createBuffer();
+      GL.bindBuffer(GL.ARRAY_BUFFER, vertexBuffer);
+      GL.bufferData(
+        GL.ARRAY_BUFFER,
+        tileBuffers[i].getVertexBuffer(),
+        GL.STATIC_DRAW
+      );
+      GL.enableVertexAttribArray(focusProgram.a_vertex);
+      GL.vertexAttribPointer(
+        focusProgram.a_vertex,
+        vertexSize,
+        GL.FLOAT,
+        false,
+        0,
+        0
+      );
+
+      /* create texture coordinate buffer */
+      let textureBuffer = GL.createBuffer();
+      GL.bindBuffer(GL.ARRAY_BUFFER, textureBuffer);
+      GL.bufferData(
+        GL.ARRAY_BUFFER,
+        tileBuffers[i].getColorBuffer(),
+        GL.STATIC_DRAW
+      );
+      GL.enableVertexAttribArray(focusProgram.a_coord);
+      GL.vertexAttribPointer(
+        focusProgram.a_coord,
+        texSize,
+        GL.FLOAT,
+        false,
+        0,
+        0
+      );
+
+      indexCount += tileBuffers[i].getIndexBuffer().length / 2.0;
+
+      /* create index buffer */
+      let indexBuffer = GL.createBuffer();
+      GL.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, indexBuffer);
+
+      /* draw geometry lines by indices */
+      if (tileBuffers[i].getIndexBuffer().length > 65535) {
+        /* use 32 bit extension */
+        const ext = (
+          GL.getExtension('OES_element_index_uint') ||
+          GL.getExtension('MOZ_OES_element_index_uint') ||
+          GL.getExtension('WEBKIT_OES_element_index_uint')
         );
-        GL.enableVertexAttribArray(focusProgram.a_vertex);
-        GL.vertexAttribPointer(
-          focusProgram.a_vertex,
-          vertexSize,
-          GL.FLOAT,
-          false,
-          0,
-          0
+
+        const buffer = new Uint32Array(tileBuffers[i].getIndexBuffer());
+        GL.bufferData(GL.ELEMENT_ARRAY_BUFFER, buffer, GL.STATIC_DRAW);
+        GL.drawElements(
+          GL.LINES,
+          tileBuffers[i].getIndexBuffer().length,
+          GL.UNSIGNED_INT,
+          indexBuffer
         );
+    
+      } else {
 
-        /* create texture coordinate buffer */
-        let textureBuffer = GL.createBuffer();
-        GL.bindBuffer(GL.ARRAY_BUFFER, textureBuffer);
-        GL.bufferData(
-          GL.ARRAY_BUFFER,
-          tileBuffers[i].getColorBuffer(),
-          GL.STATIC_DRAW
+        /* fall back to webgl default 16 bit short */     
+        const buffer = new Uint16Array(tileBuffers[i].getIndexBuffer());
+        GL.bufferData(GL.ELEMENT_ARRAY_BUFFER, buffer, GL.STATIC_DRAW);
+        GL.drawElements(
+          GL.LINES,
+          tileBuffers[i].getIndexBuffer().length,
+          GL.UNSIGNED_SHORT,
+          indexBuffer
         );
-        GL.enableVertexAttribArray(focusProgram.a_coord);
-        GL.vertexAttribPointer(
-          focusProgram.a_coord,
-          texSize,
-          GL.FLOAT,
-          false,
-          0,
-          0
-        );
-
-        indexCount += tileBuffers[i].getIndexBuffer().length / 2.0;
-
-        /* create index buffer */
-        let indexBuffer = GL.createBuffer();
-        GL.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, indexBuffer);
-
-        /* draw geometry lines by indices */
-        if (tileBuffers[i].getIndexBuffer().length > 65535) {
-          /* use 32 bit extension */
-          const ext = (
-            GL.getExtension('OES_element_index_uint') ||
-            GL.getExtension('MOZ_OES_element_index_uint') ||
-            GL.getExtension('WEBKIT_OES_element_index_uint')
-          );
-
-          const buffer = new Uint32Array(tileBuffers[i].getIndexBuffer());
-          GL.bufferData(GL.ELEMENT_ARRAY_BUFFER, buffer, GL.STATIC_DRAW);
-          GL.drawElements(
-            GL.LINES,
-            tileBuffers[i].getIndexBuffer().length,
-            GL.UNSIGNED_INT,
-            indexBuffer
-          );
-      
-        } else {
-
-          /* fall back to webgl default 16 bit short */     
-          const buffer = new Uint16Array(tileBuffers[i].getIndexBuffer());
-          GL.bufferData(GL.ELEMENT_ARRAY_BUFFER, buffer, GL.STATIC_DRAW);
-          GL.drawElements(
-            GL.LINES,
-            tileBuffers[i].getIndexBuffer().length,
-            GL.UNSIGNED_SHORT,
-            indexBuffer
-          );
-        }
       }
     }
-    // UNBINDINGS
-    GL.useProgram(null);
-    GL.bindBuffer(GL.ARRAY_BUFFER, null);
-    GL.bindTexture(GL.TEXTURE_2D, null);
-    GL.bindFramebuffer(GL.FRAMEBUFFER, null);
+  }
+  // UNBINDINGS
+  GL.useProgram(null);
+  GL.bindBuffer(GL.ARRAY_BUFFER, null);
+  GL.bindTexture(GL.TEXTURE_2D, null);
+  GL.bindFramebuffer(GL.FRAMEBUFFER, null);
+}
 
+function initSeedTexture(){
+  GL.useProgram(initProgram);
+
+  // CHANGE THE DRAWING DESTINATION TO readTexture
+  GL.bindFramebuffer(GL.FRAMEBUFFER, FBO);
+  GL.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, readTexture, 0); 
+  checkFBO(GL);
+
+  /* clear color buffer for redraw */
+  // SET CLEAR COLOR TO INVALID SEED COLOR
+  GL.clearColor(0.0, 0.0, 1.0, 0.0);
+  GL.clear(GL.COLOR_BUFFER_BIT);
+
+  /* set view port to canvas size */
+  GL.viewport(0, 0, C.width, C.height);
+
+   /* get map bounds and top left corner used for webgl translation later */
+  const bounds = M.getBounds();
+  const topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest());
+
+  /* precalculate map scale, offset and line width */
+  const zoom = M.getZoom();
+  const scale = Math.pow(2, zoom) * 256.0;
+  const offset = normalizeLatLon(topLeft.lat, topLeft.lng);
+  const width = Math.max(zoom - 12.0, 1.0);
+
+  /* define sizes of vertex and texture coordinate buffer objects */
+  const vertexSize = 2;
+  const texSize = 1;
+
+  /* define model view matrix. here: identity */
+  let uMatrix = new Float32Array([
+    1,0,0,0,
+    0,1,0,0,
+    0,0,1,0,
+    0,0,0,1
+  ]);
+
+  /* translate to move [0,0] to top left corner */
+  translateMatrix(uMatrix, -1, 1);
+
+  /* scale based on canvas width and height */
+  scaleMatrix(uMatrix, 2.0 / C.width, -2.0 / C.height);
+
+  /* scale based on map zoom scale */
+  scaleMatrix(uMatrix, scale, scale);
+
+  /* translate offset to match current map position (lat/lon) */
+  translateMatrix(uMatrix, -offset.x, -offset.y);
+
+  /* set model view */
+  GL.uniformMatrix4fv(initProgram.u_matrix, false, uMatrix);
+
+  /* adjust line width based on zoom */
+  GL.lineWidth(width);
+
+  let vertexCount = 0;
+  let indexCount = 0;
+  let drawCount = 0;
+
+  GL.uniform2f(initProgram.u_Resolution, C.width, C.height);
+
+  /* loop all tile buffers in cache and draw each geometry */
+  const tileBuffers = TILE_CACHE.getTileBufferCollection();
+
+  // DRAW LINES
+  for (let i = TILE_CACHE.getSize() - 1; i >= 0; i -= 1) {
+    /* only render tiles for current zoom level */
+    if(tileBuffers[i].getZoom() == M.getZoom()) {
+
+      vertexCount += tileBuffers[i].getVertexBuffer().length / 2.0;
+
+      /* create vertex buffer */
+      let vertexBuffer = GL.createBuffer();
+      GL.bindBuffer(GL.ARRAY_BUFFER, vertexBuffer);
+      GL.bufferData(
+        GL.ARRAY_BUFFER,
+        tileBuffers[i].getVertexBuffer(),
+        GL.STATIC_DRAW
+      );
+      GL.enableVertexAttribArray(initProgram.a_vertex);
+      GL.vertexAttribPointer(
+        initProgram.a_vertex,
+        vertexSize,
+        GL.FLOAT,
+        false,
+        0,
+        0
+      );
+
+      /* create texture coordinate buffer */
+      let textureBuffer = GL.createBuffer();
+      GL.bindBuffer(GL.ARRAY_BUFFER, textureBuffer);
+      GL.bufferData(
+        GL.ARRAY_BUFFER,
+        tileBuffers[i].getColorBuffer(),
+        GL.STATIC_DRAW
+      );
+      GL.enableVertexAttribArray(initProgram.a_coord);
+      GL.vertexAttribPointer(
+        initProgram.a_coord,
+        texSize,
+        GL.FLOAT,
+        false,
+        0,
+        0
+      );
+
+      indexCount += tileBuffers[i].getIndexBuffer().length / 2.0;
+
+      /* create index buffer */
+      let indexBuffer = GL.createBuffer();
+      GL.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, indexBuffer);
+
+      /* draw geometry lines by indices */
+      if (tileBuffers[i].getIndexBuffer().length > 65535) {
+        /* use 32 bit extension */
+        const ext = (
+          GL.getExtension('OES_element_index_uint') ||
+          GL.getExtension('MOZ_OES_element_index_uint') ||
+          GL.getExtension('WEBKIT_OES_element_index_uint')
+        );
+
+        const buffer = new Uint32Array(tileBuffers[i].getIndexBuffer());
+        GL.bufferData(GL.ELEMENT_ARRAY_BUFFER, buffer, GL.STATIC_DRAW);
+        GL.drawElements(
+          GL.LINES,
+          tileBuffers[i].getIndexBuffer().length,
+          GL.UNSIGNED_INT,
+          indexBuffer
+        );
+    
+      } else {
+
+        /* fall back to webgl default 16 bit short */     
+        const buffer = new Uint16Array(tileBuffers[i].getIndexBuffer());
+        GL.bufferData(GL.ELEMENT_ARRAY_BUFFER, buffer, GL.STATIC_DRAW);
+        GL.drawElements(
+          GL.LINES,
+          tileBuffers[i].getIndexBuffer().length,
+          GL.UNSIGNED_SHORT,
+          indexBuffer
+        );
+      }
+    }
+  }
+
+  // UNBINDING
+  GL.bindFramebuffer(GL.FRAMEBUFFER, null);
+  GL.bindBuffer(GL.ARRAY_BUFFER, null);
+  GL.bindTexture(GL.TEXTURE_2D, null);
+  GL.useProgram(null);
 }
 
 function drawContext(sliderValue){
@@ -1187,6 +1153,56 @@ function drawContext(sliderValue){
   GL.useProgram(null);
 }
 
+function drawTexture(texture) {
+  GL.useProgram(debugProgram);
+
+  GL.bindBuffer(GL.ARRAY_BUFFER, quadBuffer);
+
+  GL.vertexAttribPointer(debugProgram.a_Position, 2, GL.FLOAT, false, 0, 0);
+  GL.enableVertexAttribArray(debugProgram.a_Position);  
+
+  GL.activeTexture(GL.TEXTURE0);
+  GL.bindTexture(GL.TEXTURE_2D, texture);
+
+  GL.uniform1i(debugProgram.u_Sampler, 0);
+  GL.uniform2f(debugProgram.u_Resolution, C.width, C.height);
+    
+  GL.drawArrays(GL.TRIANGLE_STRIP, 0, 4);
+
+  GL.bindBuffer(GL.ARRAY_BUFFER, null);
+  GL.bindTexture(GL.TEXTURE_2D, null);
+  GL.useProgram(null);
+}
+
+/* MISCELLANEOUS FUNCTIONS */
+function initCircle(){
+
+  // DATA COMPUTATION
+  
+  circleVerticesX[0] = centerX;
+  circleVerticesY[0] = centerY;
+  circleVerticesZ[0] = centerZ;
+  
+  allCircleVertices.push(circleVerticesX[0]);
+  allCircleVertices.push(circleVerticesY[0]);
+  allCircleVertices.push(circleVerticesZ[0]);
+  
+  for (var i = 1; i < numberOfVertices; i++){
+    circleVerticesX[i] = centerX + (radius * Math.cos(i * (2.0 * Math.PI) / numberOfTriangles));
+    circleVerticesY[i] = centerY + (radius * Math.sin(i * (2.0 * Math.PI) / numberOfTriangles));
+    circleVerticesZ[i] = centerZ;
+    allCircleVertices.push(circleVerticesX[i]);
+    allCircleVertices.push(circleVerticesY[i]);
+    allCircleVertices.push(circleVerticesZ[i]);
+  }
+  
+  var circleVertices = new Float32Array(allCircleVertices);
+  
+  GL.bindBuffer(GL.ARRAY_BUFFER, circleBuffer);
+  GL.bufferData(GL.ARRAY_BUFFER, circleVertices, GL.STATIC_DRAW);
+  GL.bindBuffer(GL.ARRAY_BUFFER, null);
+}
+
 function dropdown(){  
     let selects = document.getElementById('textures');
     let selectedValue = selects.options[selects.selectedIndex].value;
@@ -1206,33 +1222,7 @@ function dropdown(){
     }
 }
 
-function drawTexture(texture) {
-  GL.useProgram(debugProgram);
-
-  GL.bindBuffer(GL.ARRAY_BUFFER, quadBuffer);
-
-  GL.vertexAttribPointer(debugProgram.a_Position, 2, GL.FLOAT, false, 0, 0);
-  GL.enableVertexAttribArray(debugProgram.a_Position);  
-
-  // FRAGMENT SHADER STUFF
-    // bind the texture to read from (corresponds to sampler2D object)
-  GL.activeTexture(GL.TEXTURE0);
-  GL.bindTexture(GL.TEXTURE_2D, texture);
-
-    // pass the uniforms to the fragment shader program (must be in use)
-  GL.uniform1i(debugProgram.u_Sampler, 0);
-  GL.uniform2f(debugProgram.u_Resolution, C.width, C.height);
-    
-  // render textured quad
-  GL.drawArrays(GL.TRIANGLE_STRIP, 0, 4);
-
-  GL.bindBuffer(GL.ARRAY_BUFFER, null);
-  GL.bindTexture(GL.TEXTURE_2D, null);
-  GL.useProgram(null);
-}
-
 function swapTextures(){
-	// no parameters passed because it must operate on the global textures
 	const tmp = readTexture;
 	readTexture = writeTexture;
 	writeTexture = tmp;
@@ -1289,7 +1279,8 @@ function checkFBO(gl){
 }
 
 /** 
-	CREATE EMPTY TEXTURE
+ * CREATE EMPTY TEXTURE
+ *
 */
 function initEmptyTexture(gl, canvas){
 	const ext = gl.getExtension('OES_texture_float') ||
@@ -1316,6 +1307,44 @@ function clearScreen(){
   GL.clearColor(0.0, 0.0, 0.0, 0.0);
   GL.clear(GL.COLOR_BUFFER_BIT);
 }
+
+function getRelativeMousePosition(evento, target) {
+  target = target || evento.target;
+  var rect = target.getBoundingClientRect();
+
+  return {
+    x: evento.clientX - rect.left,
+    y: evento.clientY - rect.top,
+  }
+}
+
+// assumes target or event.target is canvas
+function getNoPaddingNoBorderCanvasRelativeMousePosition(ev, target) {
+  target = target || ev.target;
+  var pos = getRelativeMousePosition(ev, target);
+
+  pos.x = pos.x * target.width  / target.clientWidth;
+  pos.y = pos.y * target.height / target.clientHeight;
+
+  return pos;  
+}
+
+function getRelativeMarkerPosition(markerPos, target){
+  var rect = target.getBoundingClientRect();
+
+  var pos = {x: null, y: null};
+  pos.x = (markerPos.x - rect.left) * target.width / target.clientWidth;
+  pos.y = (markerPos.y - rect.top) * target.height / target.clientHeight;
+
+  return pos;
+}
+
+function nearestPow2( aSize ){
+  return Math.pow( 2, Math.round( Math.log( aSize ) / Math.log( 2 ) ) ); 
+}
+
+
+/* (C) A. Schoedon's helper functions */
 
 /**
 * helper: simple translation along x/y (2D)
@@ -1444,33 +1473,3 @@ function _log(s) {
   window.console.log('[' + n.toFixed(3) + '] ' + s);
 }
 
-function getRelativeMousePosition(evento, target) {
-  target = target || evento.target;
-  var rect = target.getBoundingClientRect();
-
-  return {
-    x: evento.clientX - rect.left,
-    y: evento.clientY - rect.top,
-  }
-}
-
-// assumes target or event.target is canvas
-function getNoPaddingNoBorderCanvasRelativeMousePosition(ev, target) {
-  target = target || ev.target;
-  var pos = getRelativeMousePosition(ev, target);
-
-  pos.x = pos.x * target.width  / target.clientWidth;
-  pos.y = pos.y * target.height / target.clientHeight;
-
-  return pos;  
-}
-
-function getRelativeMarkerPosition(markerPos, target){
-  var rect = target.getBoundingClientRect();
-
-  var pos = {x: null, y: null};
-  pos.x = (markerPos.x - rect.left) * target.width / target.clientWidth;
-  pos.y = (markerPos.y - rect.top) * target.height / target.clientHeight;
-
-  return pos;
-}
