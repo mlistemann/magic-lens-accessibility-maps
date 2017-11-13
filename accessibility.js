@@ -597,8 +597,8 @@ function requestGltfTiles(tile, zoom, canvas) {
     /* update status bar */
     TILE_CACHE_NUM_RESP++;
     let tc_perc = TILE_CACHE_NUM_RESP / TILE_CACHE_NUM_REQU * 100.0;
-    document.getElementById("bar").innerHTML = statusBar(tc_perc);
-    document.getElementById("perc").innerHTML = tc_perc.toFixed(2);
+    // document.getElementById("bar").innerHTML = statusBar(tc_perc);
+    // document.getElementById("perc").innerHTML = tc_perc.toFixed(2);
 
     const buffers = response.data.tile.gltf.buffers;
 
